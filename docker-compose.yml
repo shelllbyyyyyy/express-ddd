@@ -1,0 +1,23 @@
+services:
+  postgres-express:
+    image: postgres:13
+    container_name: postgres-express
+    ports:
+      - "8888:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: express
+    volumes:
+      - data_postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - default
+
+volumes:
+  data_postgresql:

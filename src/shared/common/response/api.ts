@@ -1,4 +1,4 @@
-enum STATUS {
+export enum STATUS {
   OK = "OK",
   CREATED = "CREATED",
   ACCEPTED = "ACCEPTED",

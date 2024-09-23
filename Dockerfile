@@ -1,4 +1,4 @@
-FROM node:alpine AS production
+FROM node:alpine AS builder
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -17,6 +17,21 @@ COPY . .
 RUN pnpm build:prod
 
 RUN pnpm prune
+
+FROM node:alpine AS production
+
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
+RUN corepack enable
+
+WORKDIR /usr/src/app
+
+COPY --from=builder /usr/src/app/dist ./dist
+COPY --from=builder /usr/src/app/package.json ./package.json
+COPY --from=builder /usr/src/app/pnpm-lock.yaml ./pnpm-lock.yaml
+
+RUN pnpm install --frozen-lockfile --prod
 
 CMD ["node", "dist/main"]
 

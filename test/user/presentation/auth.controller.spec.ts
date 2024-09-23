@@ -11,7 +11,6 @@ import { redis } from "@/shared/libs/redis";
 dotenv.config();
 
 describe("TEST API /auth", () => {
-  let middleware: any;
   let server;
   let token: string;
 
@@ -43,11 +42,9 @@ describe("TEST API /auth", () => {
   beforeAll(() => {
     const appInstance = new App([new AuthRoute()]);
     server = appInstance.listen();
-    middleware = appInstance;
   });
 
   afterAll(async () => {
-    await middleware.closeWebpackMiddleware();
     await redis.quit();
     await pool.end();
     await server.close();

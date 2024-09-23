@@ -4,10 +4,9 @@
   "description": "",
   "main": "src/server.ts",
   "scripts": {
-    "build:dev": "webpack --config webpack/webpack.dev.ts",
     "build:prod": "webpack --config webpack/webpack.prod.ts",
     "start:prod": "npm run build:prod && node dist/main.js",
-    "start:dev": "npm run build:dev && node dist/main.js",
+    "start:dev": "nodemon",
     "test": "set NODE_ENV=test && jest --detectOpenHandles",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

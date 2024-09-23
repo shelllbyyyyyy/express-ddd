@@ -12,7 +12,6 @@ import { pool } from "@/shared/libs/pg/pg-module";
 dotenv.config();
 
 describe("TEST API /users", () => {
-  let middleware: any;
   let server: any;
   let token: string;
 
@@ -38,7 +37,6 @@ describe("TEST API /users", () => {
   beforeAll(async () => {
     const appInstance = new App([new UserRoute(), new AuthRoute()]);
     server = appInstance.listen();
-    middleware = appInstance;
 
     const response = await supertest(server)
       .post(`/auth/login`)
@@ -52,7 +50,6 @@ describe("TEST API /users", () => {
 
   afterAll(async () => {
     await redis.quit();
-    await middleware.closeWebpackMiddleware();
     await pool.end();
     await server.close();
   });

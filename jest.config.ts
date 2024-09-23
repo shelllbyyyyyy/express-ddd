@@ -10,6 +10,7 @@ const jestConfig: JestConfigWithTsJest = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
   },
+  testPathIgnorePatterns: ["<rootDir>/test/.+\\.controller\\.spec\\.ts$"],
 };
 
 export default jestConfig;

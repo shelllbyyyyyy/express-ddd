@@ -1,13 +1,47 @@
-name: Deploy to VPS
+name: CI Workflow
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      PORT: ${{ secrets.PORT }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_REDIS_HOST: ${{ secrets.DB_REDIS_HOST }}
+      DB_REDIS_PORT: ${{ secrets.DB_REDIS_PORT }}
+      ACCESS_TOKEN_SECRET: ${{ secrets.ACCESS_TOKEN_SECRET }}
+      REFRESH_TOKEN_SECRET: ${{ secrets.REFRESH_TOKEN_SECRET }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm run test
+
   deploy:
     runs-on: ubuntu-latest
+    needs: test
 
     steps:
       - name: Checkout code
@@ -20,10 +54,11 @@ jobs:
 
       - name: Deploy to VPS
         run: |
-          ssh -o StrictHostKeyChecking=no root@89.116.34.125 << 'EOF'
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.VPS_IP }} << 'EOF'
             # Clone the repository if it hasn't been cloned yet
             if [ ! -d "/var/www/express-ddd" ]; then
-              git clone git@github.com:username/repository.git /var/www
+              mkdir -p /var/www/express-ddd
+              git clone git@github.com:shelllbyyyyyy/express-ddd.git /var/www/express-ddd
             fi
             
             cd /var/www/express-ddd

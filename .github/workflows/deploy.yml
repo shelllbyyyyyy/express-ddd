@@ -1,0 +1,45 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Deploy to VPS
+        run: |
+          ssh -o StrictHostKeyChecking=no root@89.116.34.125 << 'EOF'
+            # Clone the repository if it hasn't been cloned yet
+            if [ ! -d "/var/www/express-ddd" ]; then
+              git clone git@github.com:username/repository.git /var/www
+            fi
+            
+            cd /var/www/express-ddd
+            git pull origin main   # Pull the latest changes from GitHub
+
+            echo "PORT=${{ secrets.PORT }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+            echo "DB_REDIS_HOST=${{ secrets.DB_REDIS_HOST }}" >> .env
+            echo "DB_REDIS_PORT=${{ secrets.DB_REDIS_PORT }}" >> .env
+            echo "ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}" >> .env
+            echo "REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}" >> .env
+
+            docker compose down       
+            docker compose up -d       
+          EOF

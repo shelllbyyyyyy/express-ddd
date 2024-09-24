@@ -4,12 +4,13 @@ import passport from "passport";
 import { Routes } from "@/shared/common/interface/route.interface";
 
 import { AuthController } from "./auth.controller";
-import { AuthMiddleware } from "@/middleware";
+
+const router: Router = Router();
 
 export class AuthRoute implements Routes {
   private authController = new AuthController();
   public path = "/auth";
-  public router = Router();
+  public router = router;
 
   constructor() {
     this.initializeRoutes();

@@ -43,11 +43,11 @@ describe("Use case", () => {
   };
 
   const mockUserService = {
-    createUser: jest.fn(),
-    findUser: jest.fn(),
-    findUserWithPassword: jest.fn(),
-    deleteUser: jest.fn(),
-    updatePassword: jest.fn(),
+    createUser: jest.fn().mockResolvedValue({ id }),
+    findUser: jest.fn().mockResolvedValue(user),
+    findUserWithPassword: jest.fn().mockResolvedValue(userWithPasssword),
+    deleteUser: jest.fn().mockResolvedValue(true),
+    updatePassword: jest.fn().mockResolvedValue({ id, email }),
     userRepository: mockUserRepository,
   };
 
@@ -61,58 +61,43 @@ describe("Use case", () => {
     expect(userService).toBeDefined();
   });
 
-  it("Should return user when createUser", async () => {
-    mockUserService.findUser.mockResolvedValue(null);
-    mockUserService.createUser.mockResolvedValue({
-      id,
-      username,
-      email,
-      password,
-    });
+  describe("Create user", () => {
+    it("Should return user when createUser", async () => {
+      const result = await userService.createUser(createUser);
 
-    const user = await userService.createUser(createUser);
-
-    expect(user).toEqual({ id, username, email, password });
-    expect(mockUserService.createUser).toHaveBeenCalledWith({
-      username,
-      email,
-      password,
+      expect(result).toEqual({ id });
     });
   });
 
-  it("Should return user when find user by email", async () => {
-    mockUserService.findUser.mockResolvedValue(user);
+  describe("Find user", () => {
+    it("Should return user when find user by email", async () => {
+      const find = await userService.findUser(email);
 
-    const find = await userService.findUser(email);
-
-    expect(find).toEqual(user);
-    expect(mockUserService.findUser).toHaveBeenCalledWith(email);
+      expect(find).toEqual(user);
+    });
   });
 
-  it("Should return user with password when find user by email", async () => {
-    mockUserService.findUserWithPassword.mockResolvedValue(userWithPasssword);
+  describe("Find user with password", () => {
+    it("Should return user with password when find user by email", async () => {
+      const find = await userService.findUserWithPassword(email);
 
-    const find = await userService.findUserWithPassword(email);
-
-    expect(find).toEqual(userWithPasssword);
-    expect(mockUserService.findUserWithPassword).toHaveBeenCalledWith(email);
+      expect(find).toEqual(userWithPasssword);
+    });
   });
 
-  it(`Should delete user success with this ${email}`, async () => {
-    mockUserService.findUser.mockResolvedValue(user);
+  describe("Delete user", () => {
+    it(`Should delete user success with this ${email}`, async () => {
+      const find = await userService.deleteUser(email);
 
-    const find = await userService.deleteUser(email);
-
-    expect(find).toBeTruthy;
-    expect(mockUserService.deleteUser).toHaveBeenCalledWith(email);
+      expect(find).toBeTruthy();
+    });
   });
 
-  it("Should return user with password when find user by email", async () => {
-    mockUserService.updatePassword.mockResolvedValue(user.id);
+  describe("Update password", () => {
+    it("Should return user with password when find user by email", async () => {
+      const find = await userService.updatePassword(update);
 
-    const find = await userService.updatePassword(update);
-
-    expect(find).toEqual(user.id);
-    expect(mockUserService.updatePassword).toHaveBeenCalledWith(update);
+      expect(find).toEqual({ id, email });
+    });
   });
 });

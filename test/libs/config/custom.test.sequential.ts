@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const TestSequencer = require("@jest/test-sequencer").default;
 
 class CustomSequencer extends TestSequencer {

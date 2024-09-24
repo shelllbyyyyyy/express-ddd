@@ -9,7 +9,6 @@ import { BcryptService } from "@/shared/libs/bcrypt";
 import { UserService } from "@/user/domain/services/user.service";
 import { HttpStatus } from "@/shared/common/enum/http-status";
 import { redis } from "@/shared/libs/redis";
-import { NODE_ENV } from "@/shared/common/config";
 
 const userService = new UserService();
 const bcryptService = new BcryptService();

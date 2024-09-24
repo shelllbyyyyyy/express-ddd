@@ -100,153 +100,160 @@ describe("Use case", () => {
     expect(redisService).toBeDefined();
   });
 
-  it("Should return user when register", async () => {
-    mockUserService.findUser.mockResolvedValue(null);
-    mockBcryptService.hash.mockResolvedValue(hashedPassword);
-    mockUserService.createUser.mockResolvedValue(user);
+  describe("Register", () => {
+    it("Should return user when register", async () => {
+      mockUserService.findUser.mockResolvedValue(null);
+      mockBcryptService.hash.mockResolvedValue(hashedPassword);
+      mockUserService.createUser.mockResolvedValue(user);
 
-    const result = await authServiceImpl.register(createUser);
+      const result = await authServiceImpl.register(createUser);
 
-    expect(result).toEqual(user);
-    expect(mockUserService.findUser).toHaveBeenCalledWith(email);
-    expect(mockUserService.createUser).toHaveBeenCalledWith({
-      username,
-      email,
-      password: "hashedPassword",
+      expect(result).toEqual(user);
+      expect(mockUserService.findUser).toHaveBeenCalledWith(email);
+      expect(mockUserService.createUser).toHaveBeenCalledWith({
+        username,
+        email,
+        password: "hashedPassword",
+      });
+    });
+
+    it("Should throw error invalid email format when register", async () => {
+      mockUserService.findUser.mockResolvedValue(null);
+      mockBcryptService.hash.mockResolvedValue(hashedPassword);
+      mockUserService.createUser.mockResolvedValue(null);
+
+      await expect(authServiceImpl.register(wrongEmail)).rejects.toThrow(
+        new Error("Invalid email format")
+      );
+
+      expect(mockUserService.findUser).toHaveBeenCalledWith(wrongEmail.email);
+      expect(mockUserService.createUser).toHaveBeenCalledWith({
+        username,
+        email: wrongEmail.email,
+        password: hashedPassword,
+      });
+    });
+
+    it(`Should return http exception 409 This email ${email} already exists when register`, async () => {
+      mockUserService.findUser.mockResolvedValue(updateUser);
+      mockBcryptService.hash.mockResolvedValue("hashedPassword");
+      mockUserService.createUser.mockResolvedValue({
+        id,
+        username,
+        email,
+        password: "hasedPassword",
+      });
+
+      await expect(authServiceImpl.register(createUser)).rejects.toThrow(
+        new HttpException(
+          HttpStatus.CONFLICT,
+          `This email ${email} already exists`
+        )
+      );
+
+      expect(mockUserService.findUser).toHaveBeenCalledWith(email);
+      expect(mockUserService.createUser).not.toHaveBeenCalled();
     });
   });
 
-  it("Should throw error invalid email format when register", async () => {
-    mockUserService.findUser.mockResolvedValue(null);
-    mockBcryptService.hash.mockResolvedValue(hashedPassword);
-    mockUserService.createUser.mockResolvedValue(null);
+  describe("Login", () => {
+    it("Should return token when login", async () => {
+      mockUserService.findUserWithPassword.mockResolvedValue(updateUser);
+      mockBcryptService.compare.mockResolvedValue(true);
+      mockTokenService.generateAccessToken.mockReturnValue(access_token);
+      mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
 
-    await expect(authServiceImpl.register(wrongEmail)).rejects.toThrow(
-      new Error("Invalid email format")
-    );
+      const redis = jest.spyOn(redisService, "set");
+      const token = await authServiceImpl.login({ email, password });
 
-    expect(mockUserService.findUser).toHaveBeenCalledWith(wrongEmail.email);
-    expect(mockUserService.createUser).toHaveBeenCalledWith({
-      username,
-      email: wrongEmail.email,
-      password: hashedPassword,
+      expect(redis).toHaveBeenCalledWith(
+        `userRefreshToken: ${id}`,
+        refresh_token,
+        "EX",
+        604800
+      );
+      expect(token).toEqual({ access_token, refresh_token });
+      expect(mockBcryptService.compare).toHaveBeenCalledWith(
+        password,
+        hashedPassword
+      );
+      expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
+      expect(mockTokenService.generateRefreshToken).toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
+    });
+
+    it("Should return 404 Email not registered when login", async () => {
+      const email = "123@gmail.com";
+
+      mockUserService.findUserWithPassword.mockResolvedValue(null);
+      mockBcryptService.compare.mockResolvedValue(null);
+      mockTokenService.generateAccessToken.mockReturnValue(access_token);
+      mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
+
+      await expect(authServiceImpl.login({ email, password })).rejects.toThrow(
+        new HttpException(HttpStatus.NOT_FOUND, `Email not registered`)
+      );
+
+      expect(mockUserService.findUserWithPassword).toHaveBeenCalledWith(email);
+      expect(mockBcryptService.compare).not.toHaveBeenCalled();
+      expect(mockTokenService.generateAccessToken).not.toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
+      expect(mockTokenService.generateRefreshToken).not.toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
+    });
+
+    it("Should return 401 Wrong password when login", async () => {
+      const password = "1234567890";
+
+      mockUserService.findUserWithPassword.mockResolvedValue(updateUser);
+      mockBcryptService.compare.mockResolvedValue(false);
+      mockTokenService.generateAccessToken.mockReturnValue(access_token);
+      mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
+
+      const spyRedis = jest.spyOn(redisService, "set");
+
+      expect(spyRedis).not.toHaveBeenCalledWith(
+        `userAccessToken: ${id}`,
+        access_token,
+        3600
+      );
+      await expect(authServiceImpl.login({ email, password })).rejects.toThrow(
+        new HttpException(HttpStatus.UNAUTHORIZED, `Wrong password`)
+      );
+      expect(mockBcryptService.compare).toHaveBeenCalledWith(
+        password,
+        hashedPassword
+      );
+      expect(mockTokenService.generateAccessToken).not.toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
+      expect(mockTokenService.generateRefreshToken).not.toHaveBeenCalledWith({
+        sub: id,
+        email: email,
+      });
     });
   });
 
-  it(`Should return http exception 409 This email ${email} already exists when register`, async () => {
-    mockUserService.findUser.mockResolvedValue(updateUser);
-    mockBcryptService.hash.mockResolvedValue("hashedPassword");
-    mockUserService.createUser.mockResolvedValue({
-      id,
-      username,
-      email,
-      password: "hasedPassword",
+  describe("Logout", () => {
+    it("Should return erase token when logout", async () => {
+      const spyRedis = jest.spyOn(redisService, "del");
+      const spy = jest.spyOn(authServiceImpl, "logOut");
+
+      const token = await authServiceImpl.logOut(id);
+
+      expect(spy).toHaveBeenCalled();
+      expect(spyRedis).toHaveBeenCalledWith(`userAccessToken: ${id}`);
+      expect(token).toBeTruthy();
     });
-
-    await expect(authServiceImpl.register(createUser)).rejects.toThrow(
-      new HttpException(
-        HttpStatus.CONFLICT,
-        `This email ${email} already exists`
-      )
-    );
-
-    expect(mockUserService.findUser).toHaveBeenCalledWith(email);
-    expect(mockUserService.createUser).not.toHaveBeenCalled();
-  });
-
-  it("Should return token when login", async () => {
-    mockUserService.findUserWithPassword.mockResolvedValue(updateUser);
-    mockBcryptService.compare.mockResolvedValue(true);
-    mockTokenService.generateAccessToken.mockReturnValue(access_token);
-    mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
-
-    const redis = jest.spyOn(redisService, "set");
-    const token = await authServiceImpl.login({ email, password });
-
-    expect(redis).toHaveBeenCalledWith(
-      `userRefreshToken: ${id}`,
-      refresh_token,
-      "EX",
-      604800
-    );
-    expect(token).toEqual({ access_token, refresh_token });
-    expect(mockBcryptService.compare).toHaveBeenCalledWith(
-      password,
-      hashedPassword
-    );
-    expect(mockTokenService.generateAccessToken).toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-    expect(mockTokenService.generateRefreshToken).toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-  });
-
-  it("Should return 404 Email not registered when login", async () => {
-    mockUserService.findUserWithPassword.mockResolvedValue(null);
-    mockBcryptService.compare.mockResolvedValue(true);
-    mockTokenService.generateAccessToken.mockReturnValue(access_token);
-    mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
-
-    const spyRedis = jest.spyOn(redisService, "set");
-
-    expect(spyRedis).not.toHaveBeenCalledWith(
-      `userAccessToken: ${id}`,
-      access_token,
-      "EX",
-      3600
-    );
-    await expect(authServiceImpl.login({ email, password })).rejects.toThrow(
-      new HttpException(HttpStatus.NOT_FOUND, `Email not registered`)
-    );
-    expect(mockBcryptService.compare).not.toHaveBeenCalled;
-    expect(mockTokenService.generateAccessToken).not.toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-    expect(mockTokenService.generateRefreshToken).not.toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-  });
-
-  it("Should return 401 Wrong password when login", async () => {
-    mockUserService.findUserWithPassword.mockResolvedValue(updateUser);
-    mockBcryptService.compare.mockResolvedValue(false);
-    mockTokenService.generateAccessToken.mockReturnValue(access_token);
-    mockTokenService.generateRefreshToken.mockReturnValue(refresh_token);
-
-    const spyRedis = jest.spyOn(redisService, "set");
-
-    expect(spyRedis).not.toHaveBeenCalledWith(
-      `userAccessToken: ${id}`,
-      access_token,
-      3600
-    );
-    await expect(authServiceImpl.login({ email, password })).rejects.toThrow(
-      new HttpException(HttpStatus.UNAUTHORIZED, `Wrong password`)
-    );
-    expect(mockBcryptService.compare).not.toHaveBeenCalled;
-    expect(mockTokenService.generateAccessToken).not.toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-    expect(mockTokenService.generateRefreshToken).not.toHaveBeenCalledWith({
-      sub: id,
-      email: email,
-    });
-  });
-
-  it("Should return erase token when logout", async () => {
-    const spyRedis = jest.spyOn(redisService, "del");
-    const spy = jest.spyOn(authServiceImpl, "logOut");
-
-    const token = await authServiceImpl.logOut(id);
-
-    expect(spy).toHaveBeenCalled();
-    expect(spyRedis).toHaveBeenCalledWith(`userAccessToken: ${id}`);
-    expect(token).toBeTruthy();
   });
 });

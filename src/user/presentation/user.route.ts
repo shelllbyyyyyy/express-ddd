@@ -6,10 +6,12 @@ import { Routes } from "@/shared/common/interface/route.interface";
 import { UserController } from "./user.controller";
 import passport from "passport";
 
+const router: Router = Router();
+
 export class UserRoute implements Routes {
   private userController = new UserController();
   public path = "/users";
-  public router = Router();
+  public router = router;
 
   constructor() {
     this.initializeRoutes();

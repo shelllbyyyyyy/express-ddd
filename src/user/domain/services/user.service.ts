@@ -4,7 +4,6 @@ import { User } from "../entities/user.entity";
 import { UserRepositoryImpl } from "@/user/persistence/user.repository.impl";
 
 import { UserRepository } from "../repositories/user.repository";
-import { UserFactory } from "../factories/user.factory";
 
 const userRepositoryImpl = new UserRepositoryImpl();
 
@@ -51,6 +50,8 @@ export class UserService {
 
   async deleteUser(email: string) {
     await this.userRepository.delete(email);
+
+    return true;
   }
 
   async updatePassword(data: User) {

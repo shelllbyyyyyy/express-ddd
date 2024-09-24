@@ -8,7 +8,7 @@ export const redis = new Redis({
   port: Number(DB_REDIS_PORT),
 });
 
-export let redisStore = new RedisStore({
+export const redisStore = new RedisStore({
   client: redis,
   prefix: "myapp:",
 });
